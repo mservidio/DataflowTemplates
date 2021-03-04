@@ -1,4 +1,6 @@
-public class FixedWidthColumn {
+import java.io.Serializable;
+
+public class FixedWidthColumn implements Serializable {
   /** The {@link DataTypes} enum contains all valid datatypes. */
   public enum DataType {
     DATE,

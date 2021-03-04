@@ -145,6 +145,11 @@ public class FixedWidthLoader {
     String getOutputDestination();
 
     void setOutputDestination(String outputDestination);
+
+    @Description("Header lines to skip")
+    int getSkipCount();
+
+    void setSkipCount(int skipCount);
   }
 
   /** The {@link ValidDestinations} enum contains all valid destinations. */
@@ -202,6 +207,9 @@ public class FixedWidthLoader {
 
     formatted.apply("Write File(s)",
         TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
+
+    // PubSub
+    // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
 
     return pipline.run();
   }
