@@ -178,6 +178,9 @@ public class FixedWidthLoader {
   public static PipelineResult run(FixedWidthFormatConversionOptions options) {
     String outputDestination = options.getOutputDestination().toUpperCase();
 
+    // Process the input file definition to a List<FieldDefinition>
+    // Sort on offset and iterate the collection in the DoFn to parse and cast each field as necessary
+
     validDestinations.put(ValidDestinations.BIG_QUERY, "BIG_QUERY");
     validDestinations.put(ValidDestinations.CLOUD_STORAGE, "CLOUD_STORAGE");
     validDestinations.put(ValidDestinations.PUB_SUB, "PUB_SUB");
