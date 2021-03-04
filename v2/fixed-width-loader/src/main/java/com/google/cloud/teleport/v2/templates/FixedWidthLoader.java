@@ -23,6 +23,9 @@ import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,6 +134,12 @@ public class FixedWidthLoader {
 
     void setInputFilePattern(String inputFilePattern);
 
+    @Description("The GCS location of the fixed width file definition")
+    @Required
+    String getFileDefinition();
+
+    void setFileDefinition(String fileDefinition);
+
     @Description("Output destination")
     @Required
     String getOutputDestination();
@@ -174,11 +183,23 @@ public class FixedWidthLoader {
     validDestinations.put(ValidDestinations.PUB_SUB, "PUB_SUB");
 
     Pipeline pipline = Pipeline.create(options);
+
     PCollection<String> lines = pipline.apply(
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
 
-    lines.apply("Write File(s)",
+    PCollection formatted = lines.apply(
+        "Converting to String",
+        ParDo.of(
+            new DoFn<String, String>() {
+              @ProcessElement
+              public void processElement(ProcessContext c) {
+                c.output(c.element());
+              }
+            }));
+
+    formatted.apply("Write File(s)",
         TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
+
     return pipline.run();
   }
 }
