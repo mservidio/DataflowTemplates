@@ -176,6 +176,9 @@ public class FixedWidthLoader {
     Pipeline pipline = Pipeline.create(options);
     PCollection<String> lines = pipline.apply(
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
+
+    lines.apply("Write File(s)",
+        TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
     return pipline.run();
   }
 }
