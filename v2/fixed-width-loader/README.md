@@ -14,14 +14,6 @@ The [FileFormatConversion](src/main/java/com/google/cloud/teleport/v2/templates/
 * Input file in Cloud Storage exists
 * Cloud Storage output bucket exists
 
-### Running Template with DataflowRunner
-```sh
-mvn exec:java -Dexec.mainClass=com.google.cloud.teleport.v2.templates.FixedWidthLoader -Dexec.cleanupDaemonThreads=false -Dexec.args=" \
---project=<my_project> \
---outputDestination=BIG_QUERY \
---inputFilePattern=gs://<bucket-name>/files/path.txt \
---runner=DataflowRunner"
-```
   
 ### Building Template
 This is a flex template meaning that the pipeline code will be containerized and the container will be used to launch the pipeline.

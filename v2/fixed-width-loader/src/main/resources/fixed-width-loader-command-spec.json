@@ -1,0 +1,7 @@
+{
+  "mainClass": "com.google.cloud.teleport.v2.templates.FixedWidthLoader",
+  "classPath": "/template/fixed-width-loader/*:/template/fixed-width-loader/libs/*:/template/fixed-width-loader/classes",
+  "defaultParameterValues": {
+    "labels": "{\"goog-dataflow-provided-template-type\":\"flex\", \"goog-dataflow-provided-template-name\":\"fixed_width_loader\"}"
+  }
+}

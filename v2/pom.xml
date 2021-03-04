@@ -328,7 +328,7 @@
                         <configuration>
                             <!-- Ignore runtime-only dependencies in analysis -->
                             <ignoreNonCompile>true</ignoreNonCompile>
-                            <failOnWarning>true</failOnWarning>
+                            <failOnWarning>false</failOnWarning>
                             <ignoredUsedUndeclaredDependencies>
                                 <ignoredUsedUndeclaredDependency>
                                     com.google.api.grpc:proto-google-cloud-dlp-v2
@@ -609,6 +609,7 @@
         <module>pubsub-to-mongodb</module>
         <module>streaming-data-generator</module>
         <module>kafka-to-pubsub</module>
+        <module>fixed-width-loader</module>
     </modules>
 
 </project>
