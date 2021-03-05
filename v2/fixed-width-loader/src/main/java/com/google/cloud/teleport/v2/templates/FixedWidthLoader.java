@@ -15,7 +15,19 @@
  */
 package com.google.cloud.teleport.v2.templates;
 
+import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkArgument;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.beam.sdk.io.fs.MatchResult;
+import org.apache.beam.sdk.io.fs.MatchResult.Status;
+import org.apache.beam.sdk.io.fs.ResourceId;
+import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -27,6 +39,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.vendor.guava.v20_0.com.google.common.io.CharStreams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -190,6 +203,8 @@ public class FixedWidthLoader {
     validDestinations.put(ValidDestinations.CLOUD_STORAGE, "CLOUD_STORAGE");
     validDestinations.put(ValidDestinations.PUB_SUB, "PUB_SUB");
 
+    String result = getGcsFileAsString(options.getFileDefinition());
+
     Pipeline pipline = Pipeline.create(options);
 
     PCollection<String> lines = pipline.apply(
@@ -212,5 +227,38 @@ public class FixedWidthLoader {
     // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
 
     return pipline.run();
+  }
+
+  /**
+   * The {@link SchemaUtils#getGcsFileAsString(String)} reads a file from GCS and returns it as a
+   * string.
+   *
+   * @param filePath path to file in GCS
+   * @return contents of the file as a string
+   * @throws IOException thrown if not able to read file
+   */
+  public static String getGcsFileAsString(String filePath) {
+    MatchResult result;
+    try {
+      result = FileSystems.match(filePath);
+      checkArgument(
+          result.status() == MatchResult.Status.OK && !result.metadata().isEmpty(),
+          "Failed to match any files with the pattern: " + filePath);
+
+      List<ResourceId> rId =
+          result.metadata().stream()
+              .map(MatchResult.Metadata::resourceId)
+              .collect(Collectors.toList());
+
+      checkArgument(rId.size() == 1, "Expected exactly 1 file, but got " + rId.size() + " files.");
+
+      Reader reader =
+          Channels.newReader(FileSystems.open(rId.get(0)), StandardCharsets.UTF_8.name());
+
+      return CharStreams.toString(reader);
+    } catch (IOException ioe) {
+      LOG.error("File system i/o error: " + ioe.getMessage());
+      throw new RuntimeException(ioe);
+    }
   }
 }
