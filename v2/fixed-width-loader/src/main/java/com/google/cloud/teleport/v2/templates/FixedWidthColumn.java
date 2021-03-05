@@ -1,3 +1,5 @@
+package com.google.cloud.teleport.v2.templates;
+
 import java.io.Serializable;
 
 public class FixedWidthColumn implements Serializable {

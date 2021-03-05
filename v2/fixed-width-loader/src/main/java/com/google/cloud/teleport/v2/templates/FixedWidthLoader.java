@@ -17,8 +17,10 @@ package com.google.cloud.teleport.v2.templates;
 
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkArgument;
 
+import com.google.cloud.teleport.v2.templates.FixedWidthColumn;
 import com.google.cloud.teleport.v2.utils.SchemaUtils;
 import java.util.EnumMap;
+import java.util.List;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -30,6 +32,9 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -190,9 +195,9 @@ public class FixedWidthLoader {
     validDestinations.put(ValidDestinations.CLOUD_STORAGE, "CLOUD_STORAGE");
     validDestinations.put(ValidDestinations.PUB_SUB, "PUB_SUB");
 
-    String fileDefinitionContent = SchemaUtils.getGcsFileAsString(options.getFileDefinition());
     // Process the file definition to a List<FieldDefinition>
     // Sort on offset and iterate the collection in the DoFn to parse and cast each field as necessary within the ParDo processElement function.
+    List<FixedWidthColumn> definition = getFileDefinition((options.getFileDefinition()));
 
     Pipeline pipline = Pipeline.create(options);
 
@@ -215,6 +220,20 @@ public class FixedWidthLoader {
     // PubSub
     // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
 
+    // BQ
+
     return pipline.run();
+  }
+
+  public static List<FixedWidthColumn> getFileDefinition(String path) {
+    String fileDefinitionContent = SchemaUtils.getGcsFileAsString(path);
+    LOG.info(fileDefinitionContent);
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      List<FixedWidthColumn> list = mapper.readValue(fileDefinitionContent, new TypeReference<List<FixedWidthColumn>>() {});
+      return list;
+    } catch (JsonProcessingException ex) {
+       return null;
+    }
   }
 }
