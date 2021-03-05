@@ -207,21 +207,6 @@ public class FixedWidthLoader {
         "Converting Fixed Width to JSON",
         ParDo.of(new FixedWidthParsingFn(path)));
 
-    /*
-    PCollection formatted = lines.apply(
-        "Converting Fixed Width to JSON",
-        ParDo.of(
-            new DoFn<String, String>() {
-              @ProcessElement
-              public void processElement(ProcessContext c) {
-                LOG.info("Test log in process");
-                FixedWidthFormatConversionOptions opt = (FixedWidthFormatConversionOptions)c.getPipelineOptions();
-                List<FixedWidthColumn> definition = getFileDefinition((opt.getFileDefinition()));
-                LOG.info("Got file definition");
-                c.output(c.element());
-              }
-            }));*/
-
     formatted.apply("Write File(s)",
         TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
 
@@ -239,15 +224,15 @@ public class FixedWidthLoader {
       this.definitionPath = definitionPath;
     }
 
-    @StartBundle
-    public void startBundle() {
+    @Setup
+    public void setup() {
       LOG.info("Performing setup");
       List<FixedWidthColumn> definition = getFileDefinition(this.definitionPath);
       LOG.info("Setup complete");
     }
 
     @ProcessElement
-    public void processElement( ProcessContext c ) {
+    public void processElement(ProcessContext c) {
       LOG.info("processElement called");
       c.output(c.element());
     }
