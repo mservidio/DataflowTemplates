@@ -200,7 +200,7 @@ public class FixedWidthLoader {
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
 
     PCollection formatted = lines.apply(
-        "Converting to String",
+        "Converting Fixed Width to JSON",
         ParDo.of(
             new DoFn<String, String>() {
               @ProcessElement
