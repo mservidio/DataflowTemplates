@@ -15,8 +15,6 @@
  */
 package com.google.cloud.teleport.v2.templates;
 
-import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkArgument;
-
 import com.google.cloud.teleport.v2.templates.FixedWidthColumn;
 import com.google.cloud.teleport.v2.utils.SchemaUtils;
 import java.util.EnumMap;
@@ -189,6 +187,7 @@ public class FixedWidthLoader {
    * @throws RuntimeException thrown if incorrect file formats are passed.
    */
   public static PipelineResult run(FixedWidthFormatConversionOptions options) {
+    LOG.info("Pipeline run called");
     String outputDestination = options.getOutputDestination().toUpperCase();
 
     validDestinations.put(ValidDestinations.BIG_QUERY, "BIG_QUERY");
@@ -197,22 +196,31 @@ public class FixedWidthLoader {
 
     // Process the file definition to a List<FieldDefinition>
     // Sort on offset and iterate the collection in the DoFn to parse and cast each field as necessary within the ParDo processElement function.
-    List<FixedWidthColumn> definition = getFileDefinition((options.getFileDefinition()));
 
     Pipeline pipline = Pipeline.create(options);
 
     PCollection<String> lines = pipline.apply(
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
 
+    String path = options.getFileDefinition();
+    PCollection formatted = lines.apply(
+        "Converting Fixed Width to JSON",
+        ParDo.of(new CustomFn(path)));
+
+    /*
     PCollection formatted = lines.apply(
         "Converting Fixed Width to JSON",
         ParDo.of(
             new DoFn<String, String>() {
               @ProcessElement
               public void processElement(ProcessContext c) {
+                LOG.info("Test log in process");
+                FixedWidthFormatConversionOptions opt = (FixedWidthFormatConversionOptions)c.getPipelineOptions();
+                List<FixedWidthColumn> definition = getFileDefinition((opt.getFileDefinition()));
+                LOG.info("Got file definition");
                 c.output(c.element());
               }
-            }));
+            }));*/
 
     formatted.apply("Write File(s)",
         TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
@@ -225,15 +233,37 @@ public class FixedWidthLoader {
     return pipline.run();
   }
 
+  private static class CustomFn extends DoFn<String, String> {
+    String definitionPath;
+    public CustomFn(String definitionPath) {
+      this.definitionPath = definitionPath;
+    }
+
+    @StartBundle
+    public void startBundle() {
+      LOG.info("Performing setup");
+      List<FixedWidthColumn> definition = getFileDefinition(this.definitionPath);
+      LOG.info("Setup complete");
+    }
+
+    @ProcessElement
+    public void processElement( ProcessContext c ) {
+      LOG.info("processElement called");
+      c.output(c.element());
+    }
+  }
+
   public static List<FixedWidthColumn> getFileDefinition(String path) {
     String fileDefinitionContent = SchemaUtils.getGcsFileAsString(path);
     LOG.info(fileDefinitionContent);
     ObjectMapper mapper = new ObjectMapper();
     try {
       List<FixedWidthColumn> list = mapper.readValue(fileDefinitionContent, new TypeReference<List<FixedWidthColumn>>() {});
+      LOG.info("File definition deserialized");
       return list;
     } catch (JsonProcessingException ex) {
-       return null;
+      LOG.error(ex.getMessage() + " - " + ex.getStackTrace());
+      return null;
     }
   }
 }
