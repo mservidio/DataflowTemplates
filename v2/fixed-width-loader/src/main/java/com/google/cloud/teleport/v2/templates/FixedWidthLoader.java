@@ -205,7 +205,7 @@ public class FixedWidthLoader {
     String path = options.getFileDefinition();
     PCollection formatted = lines.apply(
         "Converting Fixed Width to JSON",
-        ParDo.of(new CustomFn(path)));
+        ParDo.of(new FixedWidthParsingFn(path)));
 
     /*
     PCollection formatted = lines.apply(
@@ -233,9 +233,9 @@ public class FixedWidthLoader {
     return pipline.run();
   }
 
-  private static class CustomFn extends DoFn<String, String> {
+  private static class FixedWidthParsingFn extends DoFn<String, String> {
     String definitionPath;
-    public CustomFn(String definitionPath) {
+    public FixedWidthParsingFn(String definitionPath) {
       this.definitionPath = definitionPath;
     }
 
