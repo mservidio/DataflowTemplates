@@ -17,6 +17,7 @@ package com.google.cloud.teleport.v2.templates;
 
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkArgument;
 
+import com.google.cloud.teleport.v2.utils.SchemaUtils;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.channels.Channels;
@@ -203,7 +204,7 @@ public class FixedWidthLoader {
     validDestinations.put(ValidDestinations.CLOUD_STORAGE, "CLOUD_STORAGE");
     validDestinations.put(ValidDestinations.PUB_SUB, "PUB_SUB");
 
-    String result = getGcsFileAsString(options.getFileDefinition());
+    String result = SchemaUtils.getGcsFileAsString(options.getFileDefinition());
 
     Pipeline pipline = Pipeline.create(options);
 
@@ -227,38 +228,5 @@ public class FixedWidthLoader {
     // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
 
     return pipline.run();
-  }
-
-  /**
-   * The {@link SchemaUtils#getGcsFileAsString(String)} reads a file from GCS and returns it as a
-   * string.
-   *
-   * @param path path to file in GCS
-   * @return contents of the file as a string
-   * @throws IOException thrown if not able to read file
-   */
-  public static String getGcsFileAsString(String path) {
-    MatchResult result;
-    try {
-      result = FileSystems.match(path);
-      checkArgument(
-          result.status() == MatchResult.Status.OK && !result.metadata().isEmpty(),
-          "Failed to match any files with the pattern: " + path);
-
-      List<ResourceId> rId =
-          result.metadata().stream()
-              .map(MatchResult.Metadata::resourceId)
-              .collect(Collectors.toList());
-
-      checkArgument(rId.size() == 1, "Expected exactly 1 file, but got " + rId.size() + " files.");
-
-      Reader reader =
-          Channels.newReader(FileSystems.open(rId.get(0)), StandardCharsets.UTF_8.name());
-
-      return CharStreams.toString(reader);
-    } catch (IOException ioe) {
-      LOG.error("File system i/o error: " + ioe.getMessage());
-      throw new RuntimeException(ioe);
-    }
   }
 }
