@@ -233,17 +233,17 @@ public class FixedWidthLoader {
    * The {@link SchemaUtils#getGcsFileAsString(String)} reads a file from GCS and returns it as a
    * string.
    *
-   * @param filePath path to file in GCS
+   * @param path path to file in GCS
    * @return contents of the file as a string
    * @throws IOException thrown if not able to read file
    */
-  public static String getGcsFileAsString(String filePath) {
+  public static String getGcsFileAsString(String path) {
     MatchResult result;
     try {
-      result = FileSystems.match(filePath);
+      result = FileSystems.match(path);
       checkArgument(
           result.status() == MatchResult.Status.OK && !result.metadata().isEmpty(),
-          "Failed to match any files with the pattern: " + filePath);
+          "Failed to match any files with the pattern: " + path);
 
       List<ResourceId> rId =
           result.metadata().stream()
