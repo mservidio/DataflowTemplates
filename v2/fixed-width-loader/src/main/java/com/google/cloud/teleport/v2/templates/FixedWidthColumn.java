@@ -55,5 +55,9 @@ public class FixedWidthColumn implements Serializable {
   public void setFormat(String format) {
     this.format = format;
   }
+
+  public int endPosition() {
+    return this.getOffset() + this.getLength();
+  }
 }
 
