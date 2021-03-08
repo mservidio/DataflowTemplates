@@ -227,12 +227,12 @@ public class FixedWidthLoader {
         "Converting Fixed Width to JSON",
         ParDo.of(new FixedWidthParsingFn(options.getFileDefinition()))); //.setCoder(new JsonObjectCoder());
 
-    if (options.getOutputDestination() === ValidDestinations.CLOUD_STORAGE) {
+    if (options.getOutputDestination().equals(ValidDestinations.CLOUD_STORAGE)) {
       formatted.apply("Write File(s)",
           TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
-    } else if (options.getOutputDestination() === ValidDestinations.BIG_QUERY) {
+    } else if (options.getOutputDestination().equals(ValidDestinations.BIG_QUERY)) {
       // BQ
-    } else if (options.getOutputDestination() === ValidDestinations.PUB_SUB) {
+    } else if (options.getOutputDestination().equals(ValidDestinations.PUB_SUB)) {
       // PubSub
       // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
     }
