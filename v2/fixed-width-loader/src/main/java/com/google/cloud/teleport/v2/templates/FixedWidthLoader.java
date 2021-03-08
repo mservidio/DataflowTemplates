@@ -19,16 +19,10 @@ import com.google.cloud.teleport.v2.templates.FixedWidthColumn;
 import com.google.cloud.teleport.v2.utils.SchemaUtils;
 import com.google.gson.JsonObject;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.OutputStream;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.beam.sdk.coders.Coder;
-import org.apache.beam.sdk.coders.CoderException;
-import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -42,9 +36,6 @@ import org.apache.beam.sdk.values.PCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.checkerframework.checker.initialization.qual.Initialized;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -225,7 +216,7 @@ public class FixedWidthLoader {
 
     PCollection formatted = lines.apply(
         "Converting Fixed Width to JSON",
-        ParDo.of(new FixedWidthParsingFn(options.getFileDefinition()))); //.setCoder(new JsonObjectCoder());
+        ParDo.of(new FixedWidthConverters.FixedWidthParsingFn(options.getFileDefinition()))); //.setCoder(new JsonObjectCoder());
 
     if (options.getOutputDestination().equals(ValidDestinations.CLOUD_STORAGE)) {
       formatted.apply("Write File(s)",
@@ -238,55 +229,5 @@ public class FixedWidthLoader {
     }
 
     return pipline.run();
-  }
-
-  private static class FixedWidthParsingFn extends DoFn<String, String> {
-    String definitionPath;
-    List<FixedWidthColumn> definition;
-
-    public FixedWidthParsingFn(String definitionPath) {
-      this.definitionPath = definitionPath;
-    }
-
-    @Setup
-    public void setup() {
-      List<FixedWidthColumn> d = getFileDefinition(this.definitionPath);
-      this.definition = d.stream()
-          .sorted(Comparator.comparingInt(FixedWidthColumn::getOffset))
-          .collect(Collectors.toList());
-    }
-
-    @ProcessElement
-    public void processElement(ProcessContext c) {
-      String line = c.element();
-      int length = line.length();
-
-      JsonObject json = new JsonObject();
-      for (FixedWidthColumn i : this.definition) {
-        if (i.getOffset() < length - 1) {
-          String strValue = line.substring(i.getOffset(), i.endPosition());
-          json.addProperty(i.getFieldName(), strValue);
-        } else {
-          // Error condition
-        }
-      }
-      String j = json.toString();
-      LOG.info(j);
-      c.output(json.toString());
-    }
-  }
-  
-  public static List<FixedWidthColumn> getFileDefinition(String path) {
-    String fileDefinitionContent = SchemaUtils.getGcsFileAsString(path);
-    LOG.info(fileDefinitionContent);
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      List<FixedWidthColumn> list = mapper.readValue(fileDefinitionContent, new TypeReference<List<FixedWidthColumn>>() {});
-      LOG.info("File definition deserialized");
-      return list;
-    } catch (JsonProcessingException ex) {
-      LOG.error(ex.getMessage() + " - " + ex.getStackTrace());
-      return null;
-    }
   }
 }
