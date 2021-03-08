@@ -141,7 +141,7 @@ public class FixedWidthLoader {
       new EnumMap<ValidDestinations, String>(ValidDestinations.class);
 
   /**
-   * The {@link FileFormatConversionOptions} provides the custom execution options passed by the
+   * The {@link FixedWidthFormatConversionOptions} provides the custom execution options passed by the
    * executor at the command-line.
    */
   public interface FixedWidthFormatConversionOptions
@@ -206,6 +206,15 @@ public class FixedWidthLoader {
     validDestinations.put(ValidDestinations.CLOUD_STORAGE, "CLOUD_STORAGE");
     validDestinations.put(ValidDestinations.PUB_SUB, "PUB_SUB");
 
+    try {
+      if (!validDestinations.containsValue(options.getOutputDestination())) {
+        LOG.error("Invalid output destination.");
+        throw new IOException();
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Provide correct output desintation.");
+    }
+
     // Process the file definition to a List<FieldDefinition>
     // Sort on offset and iterate the collection in the DoFn to parse and cast each field as necessary within the ParDo processElement function.
 
@@ -222,15 +231,11 @@ public class FixedWidthLoader {
       formatted.apply("Write File(s)",
           TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
     } else if (options.getOutputDestination() === ValidDestinations.BIG_QUERY) {
-
+      // BQ
     } else if (options.getOutputDestination() === ValidDestinations.PUB_SUB) {
-
+      // PubSub
+      // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
     }
-
-    // PubSub
-    // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
-
-    // BQ
 
     return pipline.run();
   }
