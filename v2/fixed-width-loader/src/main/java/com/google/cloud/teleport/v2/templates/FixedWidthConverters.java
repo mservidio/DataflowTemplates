@@ -23,9 +23,12 @@ import com.google.cloud.teleport.v2.utils.SchemaUtils;
 import com.google.gson.JsonObject;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.beam.sdk.io.AvroIO.Parse;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,8 +77,14 @@ public class FixedWidthConverters {
       JsonObject json = new JsonObject();
       for (FixedWidthColumn i : this.definition) {
         if (i.getOffset() < length - 1) {
-          String strValue = line.substring(i.getOffset(), i.endPosition());
-          json.addProperty(i.getFieldName(), strValue);
+          try {
+            String strValue = line.substring(i.getOffset(), i.endPosition());
+            String outValue = castAsString(i, strValue);
+            json.addProperty(i.getFieldName(), outValue);
+          } catch (ParseException ex) {
+            // Add failsafe logic
+            json.addProperty(i.getFieldName(), "");
+          }
         } else {
           // Error condition
         }
@@ -87,19 +96,21 @@ public class FixedWidthConverters {
 
     private String castAsString(FixedWidthColumn field, String str) throws ParseException {
       switch (field.getType()) {
-        case DataType.DATE:
-          writer.value(Double.parseDouble(values.get(i)));
-          break;
+        case DATE:
+          SimpleDateFormat formatter = new SimpleDateFormat(field.getFormat());
+          Date date = formatter.parse(str);
 
-        case DataType.STRING:
+          SimpleDateFormat formatter2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+          String dateStr = formatter2.format(date);
+          return dateStr;
+
+        case STRING:
           return str;
-          break;
 
-        case DataType.NUMERIC:
+        case NUMERIC:
           Number number = NumberFormat.getInstance().parse(str);
           String numStr = String.valueOf(number);
           return numStr;
-          break;
 
         default:
           LOG.error("Invalid data type, got: " + field.getType());

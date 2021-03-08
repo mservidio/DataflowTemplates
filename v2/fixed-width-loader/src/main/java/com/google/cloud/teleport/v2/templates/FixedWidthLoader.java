@@ -26,9 +26,11 @@ import java.util.stream.Collectors;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.Validation.Required;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -159,6 +161,22 @@ public class FixedWidthLoader {
     int getSkipCount();
 
     void setSkipCount(int skipCount);
+
+    @Description(
+        "The Cloud Storage file output path.")
+    @Validation.Required
+    String getOutputFilePath();
+
+    void setOutputFilePath(String outputFilePath);
+
+    @Description(
+        "The Cloud Pub/Sub topic to publish to. "
+            + "The name should be in the format of "
+            + "projects/<project-id>/topics/<topic-name>.")
+    @Validation.Required
+    String getOutputTopic();
+
+    void setOutputTopic(String outputTopic);
   }
 
   /** The {@link ValidDestinations} enum contains all valid destinations. */
@@ -190,7 +208,6 @@ public class FixedWidthLoader {
    * @throws RuntimeException thrown if incorrect file formats are passed.
    */
   public static PipelineResult run(FixedWidthFormatConversionOptions options) {
-    LOG.info("Pipeline run called");
     String outputDestination = options.getOutputDestination().toUpperCase();
 
     validDestinations.put(ValidDestinations.BIG_QUERY, "BIG_QUERY");
@@ -206,28 +223,24 @@ public class FixedWidthLoader {
       throw new RuntimeException("Provide correct output desintation.");
     }
 
-    // Process the file definition to a List<FieldDefinition>
-    // Sort on offset and iterate the collection in the DoFn to parse and cast each field as necessary within the ParDo processElement function.
+    Pipeline pipeline = Pipeline.create(options);
 
-    Pipeline pipline = Pipeline.create(options);
-
-    PCollection<String> lines = pipline.apply(
+    PCollection<String> lines = pipeline.apply(
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
 
     PCollection formatted = lines.apply(
         "Converting Fixed Width to JSON",
-        ParDo.of(new FixedWidthConverters.FixedWidthParsingFn(options.getFileDefinition()))); //.setCoder(new JsonObjectCoder());
+        ParDo.of(new FixedWidthConverters.FixedWidthParsingFn(options.getFileDefinition())));
 
     if (options.getOutputDestination().equals(ValidDestinations.CLOUD_STORAGE)) {
       formatted.apply("Write File(s)",
-          TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
+          TextIO.write().to(options.getOutputFilePath()));
     } else if (options.getOutputDestination().equals(ValidDestinations.BIG_QUERY)) {
       // BQ
     } else if (options.getOutputDestination().equals(ValidDestinations.PUB_SUB)) {
-      // PubSub
-      // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/master/src/main/java/com/google/cloud/teleport/templates/TextToPubsubStream.java
+      formatted.apply("writeSuccessMessages", PubsubIO.writeStrings().to(options.getOutputTopic()));
     }
 
-    return pipline.run();
+    return pipeline.run();
   }
 }
