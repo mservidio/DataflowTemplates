@@ -17,8 +17,18 @@ package com.google.cloud.teleport.v2.templates;
 
 import com.google.cloud.teleport.v2.templates.FixedWidthColumn;
 import com.google.cloud.teleport.v2.utils.SchemaUtils;
+import com.google.gson.JsonObject;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.OutputStream;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.beam.sdk.coders.Coder;
+import org.apache.beam.sdk.coders.CoderException;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -27,12 +37,14 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.checkerframework.checker.initialization.qual.Initialized;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -202,10 +214,9 @@ public class FixedWidthLoader {
     PCollection<String> lines = pipline.apply(
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
 
-    String path = options.getFileDefinition();
     PCollection formatted = lines.apply(
         "Converting Fixed Width to JSON",
-        ParDo.of(new FixedWidthParsingFn(path)));
+        ParDo.of(new FixedWidthParsingFn(options.getFileDefinition()))); //.setCoder(new JsonObjectCoder());
 
     formatted.apply("Write File(s)",
         TextIO.write().to("gs://fixed-width-template/files/1_out.txt"));
@@ -220,21 +231,67 @@ public class FixedWidthLoader {
 
   private static class FixedWidthParsingFn extends DoFn<String, String> {
     String definitionPath;
+    List<FixedWidthColumn> definition;
+
     public FixedWidthParsingFn(String definitionPath) {
       this.definitionPath = definitionPath;
     }
 
     @Setup
     public void setup() {
-      LOG.info("Performing setup");
-      List<FixedWidthColumn> definition = getFileDefinition(this.definitionPath);
-      LOG.info("Setup complete");
+      List<FixedWidthColumn> d = getFileDefinition(this.definitionPath);
+      this.definition = d.stream()
+          .sorted(Comparator.comparingInt(FixedWidthColumn::getOffset))
+          .collect(Collectors.toList());
     }
 
     @ProcessElement
     public void processElement(ProcessContext c) {
-      LOG.info("processElement called");
-      c.output(c.element());
+      String line = c.element();
+      int length = line.length();
+
+      JsonObject json = new JsonObject();
+      for (FixedWidthColumn i : this.definition) {
+        if (i.getOffset() < length - 1) {
+          String strValue = line.substring(i.getOffset(), i.endPosition());
+          json.addProperty(i.getFieldName(), strValue);
+        } else {
+          // Error condition
+        }
+      }
+      String j = json.toString();
+      LOG.info(j);
+      c.output(json.toString());
+    }
+  }
+
+  public static class JsonObjectCoder extends Coder {
+    @Override
+    public void encode(Object value, @UnknownKeyFor @NonNull @Initialized OutputStream outStream)
+        throws CoderException, IOException {
+    }
+
+    @Override
+    public Object decode(@UnknownKeyFor @NonNull @Initialized InputStream inStream)
+        throws CoderException, IOException {
+      ObjectInputStream ois = new ObjectInputStream(inStream);
+      try {
+        JsonObject json = (JsonObject)ois.readObject();
+        return json.toString();
+      } catch (ClassNotFoundException e) {
+        e.printStackTrace();
+        return null;
+      }
+    }
+
+    @Override
+    public @UnknownKeyFor @NonNull @Initialized List<? extends Coder<?>> getCoderArguments() {
+      return StringUtf8Coder.of().getCoderArguments();
+    }
+
+    @Override
+    public void verifyDeterministic() throws NonDeterministicException {
+      StringUtf8Coder.of().verifyDeterministic();
     }
   }
 
