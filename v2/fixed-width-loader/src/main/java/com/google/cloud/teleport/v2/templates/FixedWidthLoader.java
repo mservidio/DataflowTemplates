@@ -164,7 +164,6 @@ public class FixedWidthLoader {
 
     @Description(
         "The Cloud Storage file output path.")
-    @Validation.Required
     String getOutputFilePath();
 
     void setOutputFilePath(String outputFilePath);
@@ -173,7 +172,6 @@ public class FixedWidthLoader {
         "The Cloud Pub/Sub topic to publish to. "
             + "The name should be in the format of "
             + "projects/<project-id>/topics/<topic-name>.")
-    @Validation.Required
     String getOutputTopic();
 
     void setOutputTopic(String outputTopic);
