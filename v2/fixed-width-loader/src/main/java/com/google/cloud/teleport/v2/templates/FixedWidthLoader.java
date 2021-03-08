@@ -275,37 +275,7 @@ public class FixedWidthLoader {
       c.output(json.toString());
     }
   }
-
-  public static class JsonObjectCoder extends Coder {
-    @Override
-    public void encode(Object value, @UnknownKeyFor @NonNull @Initialized OutputStream outStream)
-        throws CoderException, IOException {
-    }
-
-    @Override
-    public Object decode(@UnknownKeyFor @NonNull @Initialized InputStream inStream)
-        throws CoderException, IOException {
-      ObjectInputStream ois = new ObjectInputStream(inStream);
-      try {
-        JsonObject json = (JsonObject)ois.readObject();
-        return json.toString();
-      } catch (ClassNotFoundException e) {
-        e.printStackTrace();
-        return null;
-      }
-    }
-
-    @Override
-    public @UnknownKeyFor @NonNull @Initialized List<? extends Coder<?>> getCoderArguments() {
-      return StringUtf8Coder.of().getCoderArguments();
-    }
-
-    @Override
-    public void verifyDeterministic() throws NonDeterministicException {
-      StringUtf8Coder.of().verifyDeterministic();
-    }
-  }
-
+  
   public static List<FixedWidthColumn> getFileDefinition(String path) {
     String fileDefinitionContent = SchemaUtils.getGcsFileAsString(path);
     LOG.info(fileDefinitionContent);
