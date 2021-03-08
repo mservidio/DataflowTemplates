@@ -220,7 +220,7 @@ public class FixedWidthLoader {
         throw new IOException();
       }
     } catch (IOException e) {
-      throw new RuntimeException("Provide correct output desintation.");
+      throw new RuntimeException("Provide correct output destination.");
     }
 
     Pipeline pipeline = Pipeline.create(options);
