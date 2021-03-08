@@ -18,8 +18,11 @@ package com.google.cloud.teleport.v2.templates;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.teleport.v2.templates.FixedWidthColumn.DataType;
 import com.google.cloud.teleport.v2.utils.SchemaUtils;
 import com.google.gson.JsonObject;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -80,6 +83,28 @@ public class FixedWidthConverters {
       String j = json.toString();
       LOG.info(j);
       c.output(json.toString());
+    }
+
+    private String castAsString(FixedWidthColumn field, String str) throws ParseException {
+      switch (field.getType()) {
+        case DataType.DATE:
+          writer.value(Double.parseDouble(values.get(i)));
+          break;
+
+        case DataType.STRING:
+          return str;
+          break;
+
+        case DataType.NUMERIC:
+          Number number = NumberFormat.getInstance().parse(str);
+          String numStr = String.valueOf(number);
+          return numStr;
+          break;
+
+        default:
+          LOG.error("Invalid data type, got: " + field.getType());
+          throw new RuntimeException("Invalid data type, got: " + field.getType());
+      }
     }
   }
 }

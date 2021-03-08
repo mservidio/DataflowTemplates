@@ -16,6 +16,7 @@
 
 package com.google.cloud.teleport.v2.templates;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import java.io.Serializable;
 
 public class FixedWidthColumn implements Serializable {
@@ -23,7 +24,10 @@ public class FixedWidthColumn implements Serializable {
   public enum DataType {
     DATE,
     NUMERIC,
-    STRING
+    STRING,
+
+    @JsonEnumDefaultValue
+    UNKNOWN
   }
 
   private int offset;
