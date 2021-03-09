@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.beam.sdk.io.AvroIO.Parse;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +77,7 @@ public class FixedWidthConverters {
 
       JsonObject json = new JsonObject();
       for (FixedWidthColumn i : this.definition) {
-        if (i.getOffset() < length - 1) {
+        if (i.getOffset() < length - 1 && i.endPosition() < length - 1) {
           try {
             String strValue = line.substring(i.getOffset(), i.endPosition());
             String outValue = castAsString(i, strValue);

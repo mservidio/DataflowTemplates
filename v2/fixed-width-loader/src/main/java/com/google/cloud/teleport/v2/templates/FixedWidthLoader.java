@@ -221,6 +221,8 @@ public class FixedWidthLoader {
       throw new RuntimeException("Provide correct output destination.");
     }
 
+    ValidDestinations destination = ValidDestinations.valueOf(options.getOutputDestination());
+
     Pipeline pipeline = Pipeline.create(options);
 
     PCollection<String> lines = pipeline.apply(
@@ -230,12 +232,12 @@ public class FixedWidthLoader {
         "Converting Fixed Width to JSON",
         ParDo.of(new FixedWidthConverters.FixedWidthParsingFn(options.getFileDefinition())));
 
-    if (options.getOutputDestination().equals(ValidDestinations.CLOUD_STORAGE)) {
+    if (destination.equals(ValidDestinations.CLOUD_STORAGE)) {
       formatted.apply("Write File(s)",
           TextIO.write().to(options.getOutputFilePath()));
-    } else if (options.getOutputDestination().equals(ValidDestinations.BIG_QUERY)) {
+    } else if (destination.equals(ValidDestinations.BIG_QUERY)) {
       // BQ
-    } else if (options.getOutputDestination().equals(ValidDestinations.PUB_SUB)) {
+    } else if (destination.equals(ValidDestinations.PUB_SUB)) {
       formatted.apply("writeSuccessMessages", PubsubIO.writeStrings().to(options.getOutputTopic()));
     }
 
