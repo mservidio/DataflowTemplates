@@ -175,6 +175,19 @@ public class FixedWidthLoader {
     String getOutputTopic();
 
     void setOutputTopic(String outputTopic);
+
+    @Description("Table spec to write the output to")
+    @Required
+    String getOutputTableSpec();
+
+    void setOutputTableSpec(String outputTableSpec);
+
+    @Description(
+        "The dead-letter table to output to within BigQuery in <project-id>:<dataset>.<table> "
+            + "format. If it doesn't exist, it will be created during pipeline execution.")
+    String getOutputDeadletterTable();
+
+    void setOutputDeadletterTable(String value);
   }
 
   /** The {@link ValidDestinations} enum contains all valid destinations. */
@@ -224,6 +237,14 @@ public class FixedWidthLoader {
     ValidDestinations destination = ValidDestinations.valueOf(options.getOutputDestination());
 
     Pipeline pipeline = Pipeline.create(options);
+
+    /*
+     * Steps:
+     *  1) Read messages in from fixed width file
+     *  2) Transform the messages into TableRows
+     *  3) Write successful records out to BigQuery
+     *  4) Write failed records out to BigQuery
+     */
 
     PCollection<String> lines = pipeline.apply(
         "ReadLines", TextIO.read().from(options.getInputFilePattern()));
